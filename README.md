@@ -27,6 +27,8 @@ and the reply uses the previous ten stored text messages as conversation context
 The full manual checklist is [context/05-build-sequence.md](context/05-build-sequence.md).
 The exact node-by-node DeepSeek build is
 [context/07-deepseek-whatsapp-assistant.md](context/07-deepseek-whatsapp-assistant.md).
+The complete state and implementation handoff is
+[context/08-deepseek-whatsapp-implementation-handoff.md](context/08-deepseek-whatsapp-implementation-handoff.md).
 
 ## Current status
 

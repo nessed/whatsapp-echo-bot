@@ -54,6 +54,7 @@ Read these before making decisions. They are detailed and current as of setup.
 | `context/05-build-sequence.md` | Ordered build checklist with explicit "done when" conditions |
 | `context/06-gotchas.md` | Known failure modes, **symptoms only**. Read before debugging. |
 | `context/07-deepseek-whatsapp-assistant.md` | Manual node-by-node DeepSeek branch build |
+| `context/08-deepseek-whatsapp-implementation-handoff.md` | Full current-state and manual implementation handoff |
 
 `answers/06-gotchas-full.md` holds the causes and fixes for those same 19 symptoms. See the rule below before touching it.
 
@@ -114,7 +115,7 @@ Restart commands: `npx n8n start` in one terminal, the ngrok command above in an
 
 ## Current status
 
-Steps 1-6 are done and verified. The inbound path parses and logs a message with dedup. Not yet built: credential rotation, the `assistant_runs` migration, the manual DeepSeek branch, outbound logging, and the real-phone end-to-end test. Next action: step 7 in `context/05`.
+Steps 1-6 are done and verified, and DeepSeek was verified in isolation. The inbound path parses and logs a message with dedup. Not yet built: the `assistant_runs` migration, the manual DeepSeek branch, outbound logging, and the real-phone end-to-end test. Next action: step 8 in `context/05`.
 
 - [x] 1. Meta credentials verified in isolation — `scripts/01-verify-meta-credentials.js`. Permanent System User token confirmed (`expires_at: 0`).
 - [x] 2. Supabase table created and test insert verified — `supabase/001_create_messages.sql` + `scripts/02-verify-supabase.js`. Both constraints confirmed firing.
@@ -122,7 +123,7 @@ Steps 1-6 are done and verified. The inbound path parses and logs a message with
 - [x] 4. Webhook GET verification handshake passing — built by hand in the n8n GUI (Ali is clicking nodes himself for this project rather than pushing workflow JSON). `whatsapp-echo-bot` workflow: Webhook (GET, path `whatsapp`, respond via node) → IF (checks `hub.mode == subscribe` AND `hub.verify_token == WEBHOOK_VERIFY_TOKEN`) → Respond to Webhook (200, body = `hub.challenge`) on true / Respond to Webhook (403, "Forbidden") on false. Curl-tested locally and via the ngrok URL before pointing Meta at it. Meta dashboard shows "Configure Webhooks" verified (green check), and `messages` field is confirmed subscribed (had to check manually — Meta auto-subscribes several other fields like `account_update`/`calls` but not `messages` by default, matching the known trap in `context/02` §4).
 - [x] 5. POST handler parsing inbound messages — **done.** POST branch: `Webhook1` (POST, path `whatsapp`) → `If1` (guard: `messages` is a non-empty array, AND of the two conditions) → true: `Edit Fields` (5 fields) → `Respond OK (msg)` (200, `OK`); false: `Respond OK (status)` (200, `OK`). The two `Respond OK` nodes and the final expression cleanup were pushed via the n8n REST API (`scripts/`-style patch), not the GUI — the GUI got us the nodes, the API finished the wiring. Verified with `scripts/03-post-fake-payload.js`: text payload parses all 5 fields clean (`from_number` `447700900123`, `message_type` `text`, etc.); status payload terminates at `If1` false without touching Edit Fields and returns 200; image payload yields `message_text: null` + `message_type: image` with no crash (the `?.` guard). Field expressions confirmed by reading them back out of the workflow JSON and out of the execution `runData`, not just eyeballing the canvas.
 - [x] 6. Supabase logging on inbound — **done.** Chain is now `Edit Fields → Log to Supabase → Respond OK (msg)`. **Not** built with the dedicated Supabase node — that node's "Create a row" op is a plain insert with no upsert/on-conflict option, so it hard-errored on a duplicate `wa_message_id`. Replaced it with an **HTTP Request** node hitting `POST {SUPABASE_URL}/rest/v1/messages?on_conflict=wa_message_id` with `Prefer: resolution=ignore-duplicates` (the exact call proven in `scripts/02`), authed via the `supabaseApi` predefined-credential-type so the service key stays out of the workflow JSON. Node name: `Log to Supabase`. All 6 columns populated: `from_number`, `message_text`, `direction='in'`, `wa_message_id`, `timestamp` (Unix-sec×1000→ISO), `raw_payload` (full webhook body as real jsonb). Verified by querying Supabase directly: running the fake-payload script twice → exactly 2 rows (text + image), the status ping made 0 rows, the duplicate second run was silently ignored, and `raw_payload` is a real JSON object (see step-6 deviation for the bug that nearly broke this). See `LESSONS-LEARNED.md` for full detail.
-- [ ] 7. Rotate exposed credentials and verify DeepSeek in isolation
+- [x] 7. DeepSeek verified in isolation — `scripts/04-verify-deepseek.js` returned HTTP 200 with `deepseek-v4-flash`.
 - [ ] 8. Apply and verify `assistant_runs` manually in Supabase
 - [ ] 9. Build the manual DeepSeek branch and outbound logging in n8n
 - [ ] 10. Full end-to-end test from my phone

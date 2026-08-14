@@ -12,11 +12,12 @@ rebuild them. The remaining work is deliberately manual so the n8n concepts stic
 5. POST parsing with status-webhook filtering.
 6. Idempotent inbound logging to Supabase.
 
-## Step 7 — Rotate exposed credentials and prepare local configuration
+## Step 7 — Confirm local credentials and verify DeepSeek
 
-Rotate the DeepSeek key that was pasted into chat. Also rotate the Meta System User
-token and Supabase service-role key that were previously committed in
-`.env.example`. Put only the replacements in local `.env`.
+The current repository history and `.env.example` contain no real credentials.
+Keep all working test credentials only in local `.env`. Ali has chosen not to
+rotate the current test keys yet; do not block the manual build by asking again.
+Rotate or replace every test credential before any production/public deployment.
 
 Run the DeepSeek isolation test:
 
