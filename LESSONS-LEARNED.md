@@ -72,6 +72,34 @@ Using the `+` that appears on a wire is supposed to splice a new node cleanly in
 
 ---
 
+## 7. A permanent-token setup skips a step the guided wizard does for you: subscribing the app to the WABA
+
+Meta's WhatsApp Cloud API has two separate levels of webhook config that are easy to conflate:
+
+1. **App-level webhook config** (Callback URL + field subscriptions like `messages`) — this is what you set up in App Dashboard → Configure Webhooks. It's necessary, but not sufficient.
+2. **WABA-level `subscribed_apps`** — the WhatsApp Business Account itself keeps a list of which apps it forwards real events to. An app has to be explicitly added to that list via `POST /{WABA_ID}/subscribed_apps`.
+
+Meta's guided "Embedded Signup" flow calls that second endpoint for you automatically. A manual setup with a permanent System User token — which is how this project was built — never triggers it, and there's no obvious dashboard button for it either.
+
+**How it bit us:** everything looked correctly configured — Callback URL verified (green check), `messages` field subscribed, permanent token valid, `POST` to the webhook returning 200 for Meta's own dashboard "Test" payloads. But a real WhatsApp message, sent from a real phone and confirmed double-checkmark **delivered** by WhatsApp itself, never once hit the webhook. Zero requests in the ngrok inspector, no matching n8n execution.
+
+The dashboard's Test button doesn't reveal this gap because it doesn't route through the real WABA delivery pipeline — it's a separate internal Meta test path. So the one signal you'd naturally reach for to sanity-check your webhook ("does the Test button work?") gives a false pass.
+
+**Diagnosis:** `GET /{WABA_ID}/subscribed_apps` showed only Meta's own internal `WA DevX Webhook Events 1P App` — never the project's actual app (`WA 1st`). Found the WABA ID on the WhatsApp → API Setup page ("Step 1. Try it out" panel).
+
+**Fix:** one call —
+
+```
+POST https://graph.facebook.com/{version}/{WABA_ID}/subscribed_apps
+Authorization: Bearer <permanent System User token>
+```
+
+No body needed; it subscribes whichever app the token belongs to. Confirmed by re-`GET`-ing the same endpoint and seeing the app's own name appear in the list, then a real text landed in Supabase within seconds.
+
+**The general lesson:** when a webhook setup uses a permanent token instead of the guided signup wizard, don't trust "the dashboard shows it verified" as proof real traffic will flow — verify with a message sent from an actual phone, not the dashboard's own Test button, since that button can pass while the real delivery path is still broken. This applies directly to P2: if P2's WhatsApp number is also set up by hand rather than through Embedded Signup, check `subscribed_apps` before assuming webhooks will just work.
+
+---
+
 ## Still open / not yet fixed
 
 - **The GET verification `If` node only checks `hub.mode`, not `hub.verify_token`.** The two-condition check documented in `context/02` and claimed built in the old step-4 checklist entry isn't actually there — only one condition exists live. Low real-world risk for a test-number bot nobody's targeting, but it's a real gap against spec, and the same "verify a secret on an incoming request" pattern matters a lot more in P2 (verifying `X-Hub-Signature-256` on POSTs). Worth fixing before P2 starts.
