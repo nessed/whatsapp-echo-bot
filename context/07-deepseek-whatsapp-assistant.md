@@ -6,10 +6,24 @@ workflow JSON.
 
 ## 1. Create the DeepSeek credential
 
+**Superseded 2026-08-15:** use n8n's native **DeepSeek** credential type instead
+of HTTP Header Auth (this n8n version ships one — search "DeepSeek", not
+"Header Auth"). It has a single `API Key` field. Confirmed from source
+(`DeepSeekApi.credentials.js`) that it's mechanically identical to HTTP Header
+Auth — `authenticate.type: 'generic'`, sets `Authorization: Bearer {{apiKey}}`
+— just with n8n adding the `Bearer ` prefix for you. When building the
+`DeepSeek chat` HTTP Request node in §5, use Authentication → Predefined
+Credential Type → this credential.
+
+<details>
+<summary>Original instructions (HTTP Header Auth) — kept for reference, not needed if the native type is available</summary>
+
 In n8n, create an **HTTP Header Auth** credential named `DeepSeek API`:
 
 - Name: `Authorization`
 - Value: `Bearer <your replacement DEEPSEEK_API_KEY>`
+
+</details>
 
 Save it. n8n encrypts the credential; the workflow export should reference only
 the credential ID/name, never the secret.

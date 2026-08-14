@@ -96,6 +96,31 @@ Authorization: Bearer <permanent System User token>
 
 No body needed; it subscribes whichever app the token belongs to. Confirmed by re-`GET`-ing the same endpoint and seeing the app's own name appear in the list, then a real text landed in Supabase within seconds.
 
+**Exact commands used this session** (run from the project root, with `.env` loaded — `set -a; source .env; set +a` in bash):
+
+Find the WABA ID (also just visible on WhatsApp → API Setup → "Step 1. Try it out" panel, no API call needed):
+```bash
+curl -s "https://graph.facebook.com/${META_API_VERSION}/${META_PHONE_NUMBER_ID}?fields=display_phone_number,verified_name" \
+  -H "Authorization: Bearer ${META_ACCESS_TOKEN}"
+```
+(This particular call doesn't return the WABA ID itself — it was read off the dashboard. Kept here because it's what confirmed the phone number/test-number identity while diagnosing.)
+
+Check who the WABA currently forwards events to:
+```bash
+curl -s "https://graph.facebook.com/${META_API_VERSION}/<WABA_ID>/subscribed_apps" \
+  -H "Authorization: Bearer ${META_ACCESS_TOKEN}"
+```
+If your app's name/id isn't in the returned `data` array, this is the bug.
+
+The fix — subscribe this app:
+```bash
+curl -s -X POST "https://graph.facebook.com/${META_API_VERSION}/<WABA_ID>/subscribed_apps" \
+  -H "Authorization: Bearer ${META_ACCESS_TOKEN}"
+```
+Returns `{"success":true}`. Re-run the `GET` above to confirm your app now appears alongside Meta's internal one.
+
+Only needs to be run once per WABA — it's a standing subscription, not a per-message call. If P2 hits the same symptom (dashboard looks verified, Test button works, real messages don't arrive), this is the first thing to check.
+
 **The general lesson:** when a webhook setup uses a permanent token instead of the guided signup wizard, don't trust "the dashboard shows it verified" as proof real traffic will flow — verify with a message sent from an actual phone, not the dashboard's own Test button, since that button can pass while the real delivery path is still broken. This applies directly to P2: if P2's WhatsApp number is also set up by hand rather than through Embedded Signup, check `subscribed_apps` before assuming webhooks will just work.
 
 ---
