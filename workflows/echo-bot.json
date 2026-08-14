@@ -1,0 +1,358 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "287371bf-0f4d-46cc-a6a9-77f20403ce66",
+      "name": "Webhook",
+      "webhookId": "e6f491b2-1f8a-4118-af30-52ad9148ee40"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4bda2938-f1f5-4070-8bb5-068405dbb090",
+              "leftValue": "={{ $json.query[\"hub.mode\"] }}",
+              "rightValue": "subscribe",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "e1013c3e-26b0-4887-ae5f-7010030b7c51",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query[\"hub.challenge\"] }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        512,
+        -96
+      ],
+      "id": "94b46faf-689d-4060-8d7f-71c9d6c69b48",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Forbidden",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        416,
+        96
+      ],
+      "id": "05405e40-30ea-4db8-af8c-78e8d4c22a58",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        272
+      ],
+      "id": "170eab13-5510-48c8-80b8-f471fb95901e",
+      "name": "Webhook1",
+      "webhookId": "4de97b54-9c28-4102-bb2b-a8f9c952da93"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5d3269fc-f06d-47ba-b4e9-c954e53c3e15",
+              "leftValue": "={{ Array.isArray($json.body?.entry?.[0]?.changes?.[0]?.value?.messages) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "a7526f7f-e946-4bd7-98ce-59c4deb70804",
+              "leftValue": "={{ $json.body?.entry?.[0]?.changes?.[0]?.value?.messages?.length || 0 }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        272
+      ],
+      "id": "eefdd478-524c-4d86-ae3c-95fb8971d395",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a605eca7-7a47-4415-bea8-4396e1535e8a",
+              "name": "from_number",
+              "value": "={{ $json.body.entry[0].changes[0].value.messages[0].from }}",
+              "type": "string"
+            },
+            {
+              "id": "67e401f2-8cd0-4dd0-bb8e-c1fac13fde90",
+              "name": "wa_message_id",
+              "value": "={{ $json.body.entry[0].changes[0].value.messages[0].id }}",
+              "type": "string"
+            },
+            {
+              "id": "e89ae156-7b47-489e-9670-19258857dbcc",
+              "name": "timestamp",
+              "value": "={{ $json.body.entry[0].changes[0].value.messages[0].timestamp }}",
+              "type": "string"
+            },
+            {
+              "id": "32ee33b3-bab5-49b6-9000-ec9af12de506",
+              "name": "message_text",
+              "value": "={{ $json.body.entry[0].changes[0].value.messages[0].text?.body }}",
+              "type": "string"
+            },
+            {
+              "id": "16cd7773-700a-4b1b-b27b-a116b7b6ae0f",
+              "name": "message_type",
+              "value": "={{ $json.body.entry[0].changes[0].value.messages[0].type }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        480,
+        256
+      ],
+      "id": "74f551b5-7e91-4aed-ba9d-7b51f1c77f52",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        768,
+        256
+      ],
+      "id": "15e6c2ef-ffc4-4977-8009-7ccf9e9286e2",
+      "name": "Respond OK (msg)"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        480,
+        432
+      ],
+      "id": "fc5f4b15-0c0c-43ac-abe8-1343c83c6294",
+      "name": "Respond OK (status)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://evauinppptyamkttwfdd.supabase.co/rest/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "wa_message_id"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=ignore-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  from_number: $json.from_number,\n  message_text: $json.message_text,\n  direction: \"in\",\n  wa_message_id: $json.wa_message_id,\n  timestamp: new Date(parseInt($json.timestamp, 10) * 1000).toISOString(),\n  raw_payload: $('Webhook1').item.json.body\n} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        976,
+        256
+      ],
+      "id": "bd1cfb01-043d-4a43-95b2-5c881cb797ea",
+      "name": "Log to Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Wc7l3LiDoR0Bx2fi",
+          "name": "Supabase (messages)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond OK (status)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Log to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Respond OK (msg)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

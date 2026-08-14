@@ -1,0 +1,38 @@
+# Credentials
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Build / runtime
+dist/
+build/
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# n8n local state
+.n8n/
+database.sqlite
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Scratch
+tmp/
+scratch/
+*.local.json
