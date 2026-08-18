@@ -96,6 +96,7 @@ answers/       Answer key for the gotchas list (see the rule below)
 scripts/       Standalone verification scripts — prove one service works in isolation
 supabase/      SQL migrations (messages + assistant_runs tables)
 workflows/     Exported n8n workflow JSON (credential *ids* only, no secrets)
+               -> import whatsapp-deepseek-assistant.json; echo-bot.json is historical
 CLAUDE.md      Original author's working agreement + build log and deviations log
 ```
 

@@ -32,6 +32,9 @@ order-confirmation bot on the same patterns.
   system.** Do not "fix a bug" by editing it and reporting the bug fixed.
 - `scripts/` is verification tooling only. It is *not* part of the running
   system. Nothing in `scripts/` executes in production.
+- `workflows/echo-bot.json` is a **historical** 10-node snapshot, not the live
+  system. The live export is `workflows/whatsapp-deepseek-assistant.json`
+  (23 nodes). Both are internally named `"My workflow"`.
 - Therefore: most real changes happen in the n8n GUI or via the n8n REST API,
   not in tracked files. Reading the repo alone cannot tell you the current live
   state — only n8n can.

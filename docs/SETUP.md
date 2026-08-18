@@ -55,8 +55,8 @@ cp .env.example .env
 
 - **From the other developer** (send privately, never through git):
   `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `DEEPSEEK_API_KEY`
-- **Your own**, from steps 3–4 below: all `META_*`, `WEBHOOK_VERIFY_TOKEN`,
-  `N8N_URL`, `N8N_API_KEY`, `ALLOWED_WHATSAPP_NUMBER`
+- **Your own**, from steps 3–5 below: all `META_*`, `WEBHOOK_VERIFY_TOKEN`,
+  `N8N_URL`, `N8N_API_KEY`, `NGROK_AUTHTOKEN`, `ALLOWED_WHATSAPP_NUMBER`
 
 `.env` is gitignored and has never been committed. Keep it that way.
 
@@ -139,6 +139,11 @@ Put the ngrok HTTPS URL in `.env` as `N8N_URL` (no trailing slash).
 ## 6. Import the workflow and make it yours
 
 **Workflows → Import from File →** `workflows/whatsapp-deepseek-assistant.json`
+
+Import **that** file, not `workflows/echo-bot.json` — the latter is a historical
+10-node snapshot from before the DeepSeek branch existed. Both are internally
+named `"My workflow"`, so rename yours in the GUI after importing. See
+[../workflows/README.md](../workflows/README.md).
 
 ### 6a. Change the three literals
 
