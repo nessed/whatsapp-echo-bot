@@ -24,6 +24,11 @@ Keep me in the loop with short, plain-English explanations of what you did and w
 
 ### Explaining
 
+- **Talk to me like a human, not like a machine.** Use natural, conversational
+  language and explain the practical meaning first. Do not dump architecture,
+  jargon, schemas, or implementation details on me without first saying plainly
+  what they mean and why I should care. Keep answers easy to follow, as if we are
+  two people working through the product together.
 - Plain terms, colleague register. Skip the praise, the "great question," and recaps of stuff I already said.
 - Do flag Meta-specific quirks when they bite — those are genuinely obscure and worth a sentence.
 - Flag uncertainty inline. If you're not sure a menu is named what the docs say or an API version is current, say so rather than sending me chasing a confident guess.
@@ -117,7 +122,14 @@ Restart commands: `n8n start` in one terminal (global install, see above), the n
 
 ## Current status
 
-Steps 1-8 are done and verified, including a *real* phone-to-Supabase round trip (not just the fake-payload script) after fixing a WABA `subscribed_apps` gap — see deviations log. Step 9 (DeepSeek branch) is in progress, built manually node-by-node in the n8n GUI.
+**All 10 steps are done and verified.** P1 is functionally complete: a text from the allowed handset reaches n8n over the Meta webhook, is logged, guarded, claimed for idempotency, answered by DeepSeek with bounded conversation context, delivered back over the Graph API, logged outbound, and the run closed out with token usage. Non-text input gets a fixed reply without touching DeepSeek, and DeepSeek/send/log failures mark the run `failed` with the error captured.
+
+The workflow is 23 nodes, exported to `workflows/whatsapp-deepseek-assistant.json` (credential ids and names only — no secret material).
+
+Known loose ends, none blocking:
+- Several old `assistant_runs` rows sit at `status: claimed` with no completion. They are from runs that happened before `Complete run` existed; harmless historical noise, not a bug in the current chain.
+- `META_APP_ID` and `META_APP_SECRET` are still empty in `.env`. `X-Hub-Signature-256` verification on the inbound webhook was never built — optional for P1, expected for P2.
+- Credentials exposed during development were noted for rotation earlier in this file; that has not been done.
 
 **Next action — resume mid-step-9, exactly here:**
 
@@ -148,7 +160,8 @@ n8n and ngrok were both running locally at end of session but **will need restar
 - [x] 7. DeepSeek verified in isolation — `scripts/04-verify-deepseek.js` returned HTTP 200 with `deepseek-v4-flash`.
 - [x] 8. Apply and verify `assistant_runs` manually in Supabase — SQL from `supabase/002_create_assistant_runs.sql` applied. Verified live: `assistant_runs` reachable via service_role Data API (empty, as expected); `claim_assistant_run()` RPC claims on first call and correctly returns `claimed:false` on a duplicate `inbound_wa_message_id`; `anon`/`authenticated` lockout confirmed structurally via the `revoke all` grants in the SQL (didn't have the anon key handy to double-check live).
 - [x] 9. Build the manual DeepSeek branch and outbound logging in n8n — **done.** 23 nodes. The full inbound → DeepSeek → outbound chain works end to end: executions 37 and 40 were real messages from the handset that got real DeepSeek answers delivered back with valid wamids. Execution 44 then proved the complete path including bookkeeping (outbound row logged, run `completed` with usage 40/2/42), execution 45 proved the non-text branch, and a deliberately-broken DeepSeek URL proved the failure path. All synthetic test rows were deleted from `messages` and `assistant_runs` afterwards; only real handset traffic remains.
-- [ ] 10. Full end-to-end test from my phone — **inbound half done for real**: a real text from the allowed phone, double-checkmark delivered, was confirmed logged into `messages` via the actual Meta→ngrok→n8n→Supabase path (not the fake-payload script) after fixing the `subscribed_apps` gap below. Outbound/DeepSeek reply half still blocked on step 9.
+- [x] 10. Full end-to-end test from my phone — **done, both directions.** A real text from the allowed handset got a real DeepSeek answer delivered back, and a follow-up question ("what did we say 2 sentences ago") was answered from stored history, proving `Log outbound` → `Load history` actually closes the memory loop over the live path. A real image got the fixed `I currently support text messages only.` reply. The run landed as `completed` with 67 total tokens. Caveat worth remembering: that first recall answer was partly confabulated, because outbound logging only went live at the end of step 9 — the rows from earlier sessions are user-side only, so DeepSeek had no record of its own older turns to recall. Conversations from this point forward have genuine two-sided history. Original inbound-only note kept below for the `subscribed_apps` fix that made it work:
+- [x] 10a. (inbound half, fixed earlier): a real text from the allowed phone, double-checkmark delivered, was confirmed logged into `messages` via the actual Meta→ngrok→n8n→Supabase path (not the fake-payload script) after fixing the `subscribed_apps` gap below. Outbound/DeepSeek reply half still blocked on step 9.
 
 **Claude Code: update this checklist as we complete steps.** Tick the box and add a one-line note about anything that differed from the docs — that note is what makes the docs accurate for P2.
 
