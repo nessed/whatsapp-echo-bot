@@ -151,7 +151,7 @@ That matters here because `Log to Supabase` sends `Prefer: resolution=ignore-dup
 
 **How it bit us:** the chain is `Edit Fields → Log to Supabase → Respond OK (msg) → Allowed Sender → text message`. Confirmed from execution 29, a real phone message:
 
-- `Edit Fields` output: `{ from_number: "923000413777", message_text: "hiii", message_type: "text", … }`
+- `Edit Fields` output: `{ from_number: "<ALLOWED_NUMBER>", message_text: "hiii", message_type: "text", … }`
 - `Log to Supabase` output: `{}`
 - `Respond OK (msg)` output: `{}`
 

@@ -16,7 +16,7 @@ function log(line) {
 
 const { META_ACCESS_TOKEN, META_PHONE_NUMBER_ID, META_API_VERSION } = process.env;
 
-const missing = ["META_ACCESS_TOKEN", "META_PHONE_NUMBER_ID", "META_API_VERSION"].filter(
+const missing = ["META_ACCESS_TOKEN", "META_PHONE_NUMBER_ID", "META_API_VERSION", "ALLOWED_WHATSAPP_NUMBER"].filter(
   (key) => !process.env[key]
 );
 if (missing.length > 0) {
@@ -25,8 +25,10 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-// Your own registered test recipient number, no "+", no spaces.
-const TEST_RECIPIENT = "923000413777";
+// Recipient comes from .env so each developer texts their OWN handset.
+// Must be a number registered as a verified recipient on your Meta test number,
+// digits only, no "+", no spaces.
+const TEST_RECIPIENT = process.env.ALLOWED_WHATSAPP_NUMBER;
 
 const url = `https://graph.facebook.com/${META_API_VERSION}/${META_PHONE_NUMBER_ID}/messages`;
 

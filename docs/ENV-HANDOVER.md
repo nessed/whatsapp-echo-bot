@@ -81,7 +81,7 @@ received) or **REPLACE** (yours).
 
 | Variable | Action | Notes |
 |---|---|---|
-| `ALLOWED_WHATSAPP_NUMBER` | **REPLACE** | **Your** handset. Digits only, no `+`, no spaces. Include the country code. |
+| `ALLOWED_WHATSAPP_NUMBER` | **REPLACE** | **Your** handset. Digits only, no `+`, no spaces. Include the country code. `verify:meta` refuses to run without it and texts this number, so a wrong value means you text someone else. |
 
 > ⚠️ Changing this in `.env` does **not** change the bot's behaviour. The
 > allowlist the workflow actually enforces is hardcoded in an n8n node — see
@@ -113,7 +113,7 @@ So after **Workflows → Import from File →**
 
 | Node | Field | Currently | Change to |
 |---|---|---|---|
-| `Allowed Sender` | rightValue | `923000413777` | your handset, digits only, no `+` |
+| `Allowed Sender` | rightValue | `<ALLOWED_NUMBER>` | your handset, digits only, no `+` |
 | `Send WhatsApp reply` | URL | `https://graph.facebook.com/v25.0/1303482916173126/messages` | your `META_PHONE_NUMBER_ID` in place of that number |
 | `Send text-only reply` | URL | same id | your `META_PHONE_NUMBER_ID` |
 

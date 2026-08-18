@@ -83,7 +83,7 @@ does not cover.
 
 | Node | Literal | Meaning |
 |---|---|---|
-| `Allowed Sender` | `923000413777` (rightValue, Fixed mode) | the only handset that gets AI replies |
+| `Allowed Sender` | `<ALLOWED_NUMBER>` (rightValue, Fixed mode) | the only handset that gets AI replies |
 | `Send WhatsApp reply` | `1303482916173126` in the Graph URL | Meta phone number id |
 | `Send text-only reply` | `1303482916173126` in the Graph URL | Meta phone number id |
 | 7 Supabase nodes | project URL | `Log to Supabase`, `Claim assistant run`, `Load history`, `Log outbound`, `Complete run`, `Log text-only reply`, `Mark run failed` |

@@ -7,6 +7,10 @@
 
 const { SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
 
+// Obviously-fake number so smoke-test rows are easy to spot and delete from the
+// shared Supabase project. Same value the fake-payload script uses.
+const TEST_NUMBER = "447700900123";
+
 const missing = ["SUPABASE_URL", "SUPABASE_SERVICE_KEY"].filter((k) => !process.env[k]);
 if (missing.length > 0) {
   console.error(`Missing env vars: ${missing.join(", ")}`);
@@ -36,7 +40,7 @@ const insertRes = await fetch(base, {
   method: "POST",
   headers: { ...headers, Prefer: "return=representation" },
   body: JSON.stringify({
-    from_number: "923000413777",
+    from_number: TEST_NUMBER,
     message_text: "step 2 smoke test",
     direction: "in",
     wa_message_id: TEST_WAMID,
@@ -61,7 +65,7 @@ const badDirRes = await fetch(base, {
   method: "POST",
   headers,
   body: JSON.stringify({
-    from_number: "923000413777",
+    from_number: TEST_NUMBER,
     direction: "sideways",
     timestamp: new Date().toISOString(),
   }),
@@ -76,7 +80,7 @@ const dupRes = await fetch(`${base}?on_conflict=wa_message_id`, {
   method: "POST",
   headers: { ...headers, Prefer: "resolution=ignore-duplicates,return=representation" },
   body: JSON.stringify({
-    from_number: "923000413777",
+    from_number: TEST_NUMBER,
     message_text: "duplicate attempt",
     direction: "in",
     wa_message_id: TEST_WAMID,

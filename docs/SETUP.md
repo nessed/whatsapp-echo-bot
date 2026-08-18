@@ -156,7 +156,7 @@ are currently the *other* developer's:
 
 | Node | Field | Change to |
 |---|---|---|
-| `Allowed Sender` | rightValue, currently `923000413777` | your handset, digits only, no `+` |
+| `Allowed Sender` | rightValue, currently `<ALLOWED_NUMBER>` | your handset, digits only, no `+` |
 | `Send WhatsApp reply` | URL, currently `.../v25.0/1303482916173126/messages` | your `META_PHONE_NUMBER_ID` |
 | `Send text-only reply` | same id in its URL | your `META_PHONE_NUMBER_ID` |
 

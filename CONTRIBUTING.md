@@ -73,7 +73,7 @@ JSON you must change these by hand:
 
 | Node | Currently | Change to |
 |---|---|---|
-| `Allowed Sender` | `923000413777` (rightValue) | your own handset, digits only, no `+` |
+| `Allowed Sender` | `<ALLOWED_NUMBER>` (rightValue) | your own handset, digits only, no `+` |
 | `Send WhatsApp reply` | `.../v25.0/1303482916173126/messages` | your own phone number id |
 | `Send text-only reply` | same id in the URL | your own phone number id |
 

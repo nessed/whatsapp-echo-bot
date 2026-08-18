@@ -42,7 +42,7 @@ belong to whoever exported it:
 
 | Node | Literal | Change to |
 |---|---|---|
-| `Allowed Sender` | `923000413777` | your handset, digits only, no `+` |
+| `Allowed Sender` | `<ALLOWED_NUMBER>` | your handset, digits only, no `+` |
 | `Send WhatsApp reply` | `1303482916173126` in the URL | your Meta phone number id |
 | `Send text-only reply` | `1303482916173126` in the URL | your Meta phone number id |
 
