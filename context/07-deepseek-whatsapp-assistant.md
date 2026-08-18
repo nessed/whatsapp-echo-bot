@@ -30,37 +30,79 @@ the credential ID/name, never the secret.
 
 ## 2. Put the new branch after inbound logging
 
-Start at the output of `Log to Supabase`. Keep `Respond OK (status)` unchanged.
+Start at the output of `Respond OK (msg)` (see the note below — the responder
+ended up mid-chain, not at the end). Keep `Respond OK (status)` unchanged.
 The message branch needs these decisions in this order:
 
 ```text
-Log inbound → Allowed sender? → Text message?
+Log inbound → Allowed Sender? → text message?
   allowed + text → Claim assistant run → Claim succeeded?
-    yes → Load history → Build request → DeepSeek → Send Meta reply → Log out → Complete run → Respond 200
-    no  → Respond 200
-  allowed + non-text → Send text-only reply → Log out → Respond 200
-  blocked sender → Respond 200
+    yes → Load history → Build request → DeepSeek → Send Meta reply → Log out → Complete run
+    no  → stop
+  allowed + non-text → Send text-only reply → Log out
+  blocked sender → stop
 ```
 
-Every terminal branch must reach a Respond to Webhook node. After editing, use the
-Publish control; saved draft changes are not live.
+**Note (as actually built, 2026-08-18) — the Respond node fires early, so the
+downstream branches do not each need one.** The diagram above originally ended
+every branch in its own Respond to Webhook node. In the real workflow
+`Respond OK (msg)` sits *before* `Allowed Sender`:
+
+```text
+Webhook1 → If1 → Edit Fields → Log to Supabase → Respond OK (msg) → Allowed Sender → text message → …
+```
+
+Meta's HTTP 200 is therefore already sent before any assistant logic runs, so
+`Allowed Sender` false, `text message` false, `Claim succeeded` false and the
+whole DeepSeek path need **no** Respond to Webhook node of their own. This is a
+deliberate deviation from the diagram, and a desirable one: Meta gets its 200
+fast no matter how slow DeepSeek is. The step-5 rule (a `responseNode` webhook
+refuses to run a branch with no responder) is satisfied by that single early
+Respond node covering the whole message branch.
+
+After editing, use the Publish control; saved draft changes are not live.
 
 ## 3. Add the sender and text guards
 
-Add an IF node named `Allowed sender` after `Log to Supabase`:
+Add an IF node named `Allowed Sender` after `Respond OK (msg)` (see the §2 note —
+the responder now sits mid-chain):
 
-- Left value: `={{ $json.from_number }}`
-- Operation: equals
-- Right value: your digits-only `ALLOWED_WHATSAPP_NUMBER`
+- Left value: `={{ $('Edit Fields').item.json.from_number }}` — Expression mode
+- Operation: string equals
+- Right value: your digits-only `ALLOWED_WHATSAPP_NUMBER` — **Fixed** mode
 
-On the true branch, add `Text message`:
+On the true branch, add `text message`:
 
-- Left value: `={{ $json.message_type }}`
-- Operation: equals
-- Right value: `text`
+- Left value: `={{ $('Edit Fields').item.json.message_type }}` — Expression mode
+- Operation: string equals
+- Right value: `text` — **Fixed** mode
 
-The false branch of `Text message` sends this fixed Meta text message to
-`$json.from_number`:
+**Why `$('Edit Fields')` and not `$json`.** `$json` only ever means "whatever the
+immediately-previous node emitted." `Log to Supabase` sends
+`Prefer: resolution=ignore-duplicates` without `return=representation`, so
+Supabase answers 201 with an **empty body** — the HTTP Request node outputs `{}`,
+and `Respond OK (msg)` passes that empty object straight through. Confirmed from
+a real execution: `Edit Fields` emitted the five parsed fields,
+`Log to Supabase` and `Respond OK (msg)` both emitted `{}`. Written against
+`$json.from_number` these guards compare `undefined` and silently never fire
+true. Once a chain passes through an HTTP node the parsed fields are gone —
+reach back by node name. (`Log to Supabase` already did this correctly for
+`raw_payload` via `$('Webhook1').item.json.body`.)
+
+**Warning — Fixed vs Expression mode on the right-hand value.** A parameter
+field toggles between Fixed and Expression (small `fx` badge on its left edge).
+Expression-mode fields are *always* stored with a leading `=` in the workflow
+JSON; that `=` is the mode marker, not something you typed, and retyping the
+value can never remove it. Symptom: a right value that keeps saving as `"=text "`
+however many times you retype plain `text`. Fix: hover the field and click
+**Fixed**. Rule of thumb — a comparison's left side wants Expression mode, its
+right side wants Fixed mode when comparing against a constant. The canvas renders
+the value and hides the mode, so diagnose by pulling
+`GET /api/v1/workflows/{id}` and reading `rightValue` directly. The same applies
+to every literal comparison value in this document.
+
+The false branch of `text message` sends this fixed Meta text message to
+`$('Edit Fields').item.json.from_number`:
 
 ```text
 I currently support text messages only.
@@ -87,9 +129,10 @@ node always receives one result, even when a duplicate was already claimed.
 } }}
 ```
 
-Add `Claim succeeded` after it. Check `={{ $json.claimed }}` is `true`. Only the
-true branch may call DeepSeek. The false branch returns HTTP 200 without sending
-a second reply.
+Add `Claim succeeded` after it. Check `={{ $json.claimed }}` is `true` — `$json`
+is correct here because the RPC call directly precedes it and does return a body.
+Only the true branch may call DeepSeek. The false branch just stops: the 200 was
+already sent by `Respond OK (msg)`, and no second reply goes out.
 
 ## 5. Fetch history and call DeepSeek
 

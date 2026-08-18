@@ -125,6 +125,53 @@ Only needs to be run once per WABA — it's a standing subscription, not a per-m
 
 ---
 
+## 8. A leading `=` you never typed means the field is in Expression mode
+
+Every n8n parameter field has two modes — **Fixed** (the text is taken literally) and **Expression** (the contents get evaluated). You switch between them with a small Fixed|Expression toggle that appears when you hover the field; an expression-mode field then shows a little `fx` badge on its left edge.
+
+The part that isn't obvious: an expression-mode field is **always** stored with a leading `=` in the workflow JSON. That `=` is the *mode marker*. It is not part of the value, you didn't type it, and no amount of retyping the value will remove it — because the mode, not the text, is what puts it there.
+
+**How it bit us:** the `text message` IF node's right-hand value (the constant `text` it compares against) kept saving as `"=text "`. Retyped it as plain `text` several times; it came back as `"=text "` every time. The instinct was "there's whitespace corruption again, like #2 and #3" — wrong. The field had simply been toggled into Expression mode at some point, so n8n was faithfully storing `=` + whatever was in the box.
+
+**Fix:** hover the field, click **Fixed** on the Fixed|Expression toggle. The `fx` badge disappears and the value stores as a bare literal `text`.
+
+**Rule of thumb for IF nodes:** a comparison's **left** side normally wants Expression mode — it's reading data, e.g. `={{ $('Edit Fields').item.json.message_type }}`. Its **right** side wants **Fixed** mode whenever you're comparing against a constant like `text` or a phone number. Left dynamic, right literal.
+
+**How to diagnose it:** you can't, from the canvas. The canvas renders the *value* and hides the *mode* entirely, which is exactly why this wastes time. Pull `GET /api/v1/workflows/{id}` and read `rightValue` in the raw JSON — a stray leading `=` there tells you it's a mode problem, not a typing problem.
+
+**The general lesson:** this shares a symptom class with #2 and #3 — "the stored JSON isn't what the editor shows you" — but the cause is completely different. #2/#3 are invisible characters you accidentally introduced. This is a mode setting that *legitimately* rewrites the stored value. When a value keeps coming back wrong after you've retyped it carefully, stop retyping and go look at the mode.
+
+---
+
+## 9. Any HTTP node in the chain destroys `$json` for everything downstream
+
+`$json` in n8n means exactly one thing: **whatever the immediately-previous node emitted.** Not "the data flowing through the workflow" — there's no such shared bag. Each node's output replaces the last.
+
+That matters here because `Log to Supabase` sends `Prefer: resolution=ignore-duplicates` with no `return=representation`, so Supabase deliberately replies **201 with an empty body**. n8n's HTTP Request node has nothing to emit, so it emits `{}`. And `Respond OK (msg)` — a Respond to Webhook node — just passes that empty object along.
+
+**How it bit us:** the chain is `Edit Fields → Log to Supabase → Respond OK (msg) → Allowed Sender → text message`. Confirmed from execution 29, a real phone message:
+
+- `Edit Fields` output: `{ from_number: "923000413777", message_text: "hiii", message_type: "text", … }`
+- `Log to Supabase` output: `{}`
+- `Respond OK (msg)` output: `{}`
+
+Both guard IF nodes were originally written against `$json.from_number` and `$json.message_type`. By the time execution reached them, `$json` was `{}` — so both comparisons evaluated `undefined` against a string, both would have taken the false branch forever, and nothing would ever have reached DeepSeek. No error, no warning; the workflow would have looked like it "ran fine" while silently doing nothing.
+
+**Fix:** reach back to the node that actually holds the data, by name:
+
+```javascript
+={{ $('Edit Fields').item.json.from_number }}
+={{ $('Edit Fields').item.json.message_type }}
+```
+
+`$('Node Name').item` resolves to the item from that node that corresponds to the current item, so it survives any number of intervening nodes. The existing `Log to Supabase` node already did this correctly for `raw_payload` via `$('Webhook1').item.json.body` — same technique, we just hadn't generalised the habit.
+
+**The general lesson:** treat `$json` as safe only for the node directly upstream. The moment a chain passes through anything that reshapes or empties its output — an HTTP Request, a Respond node, a Code node returning something else — reach back by node name instead. Applies immediately to the rest of this build (history fetch, DeepSeek call, Meta send all return their own bodies) and to P2, which will have a longer chain still.
+
+Corollary: an empty `{}` from an HTTP node is not a failure signal. A 201-with-no-body is exactly what we *asked* Supabase for. The bug isn't the empty object; it's assuming your data is still in it.
+
+---
+
 ## Still open / not yet fixed
 
 - **The GET verification `If` node only checks `hub.mode`, not `hub.verify_token`.** The two-condition check documented in `context/02` and claimed built in the old step-4 checklist entry isn't actually there — only one condition exists live. Low real-world risk for a test-number bot nobody's targeting, but it's a real gap against spec, and the same "verify a secret on an incoming request" pattern matters a lot more in P2 (verifying `X-Hub-Signature-256` on POSTs). Worth fixing before P2 starts.
