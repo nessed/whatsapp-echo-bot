@@ -1,5 +1,18 @@
 # CLAUDE.md
 
+> **Collaborators and their agents: this file is Ali's personal working
+> agreement plus the P1 build log.** The "Operating mode: manual-first coaching"
+> rules below describe how *he* wants his agent to work with him — they are not
+> addressed to you.
+>
+> Start at **[docs/AGENT-BRIEF.md](docs/AGENT-BRIEF.md)** instead. Come back
+> here for the **deviations log** at the bottom, which is the most valuable
+> reference in the repo: every place the documentation turned out to be wrong,
+> and what was actually true.
+>
+> Two rules below *do* apply to everyone: never open
+> `answers/06-gotchas-full.md` unprompted, and never commit secrets.
+
 ## What this is
 
 A private WhatsApp interface to DeepSeek. The allowed test phone sends text to the Meta number; n8n supplies recent conversation context to DeepSeek, returns the answer through WhatsApp, and logs both directions in Supabase.

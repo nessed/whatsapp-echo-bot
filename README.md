@@ -19,8 +19,16 @@ ends.
    does and *why it exists*. No n8n knowledge assumed. ~30 min read.
 2. **[docs/SETUP.md](docs/SETUP.md)** — get it running on your machine.
 3. **[CONTRIBUTING.md](CONTRIBUTING.md)** — how two people work on this without
-   breaking each other. **Read before touching n8n** — the live workflow is a
-   shared single instance, not a per-developer thing.
+   breaking each other. **Read before touching n8n.**
+
+> **Working with an AI agent? Point it at
+> [docs/AGENT-BRIEF.md](docs/AGENT-BRIEF.md).** It has the invariants, the n8n
+> traps that produce silent wrong behaviour, and the one thing agents always get
+> wrong here — the workflow does **not** read `.env`.
+>
+> Note that root-level `CLAUDE.md` is the *original author's* personal working
+> agreement plus the build log. Its coaching instructions are addressed to his
+> setup, not to you — treat it as history and reference.
 
 Everything else is reference material you can look up when you need it.
 
@@ -88,7 +96,7 @@ answers/       Answer key for the gotchas list (see the rule below)
 scripts/       Standalone verification scripts — prove one service works in isolation
 supabase/      SQL migrations (messages + assistant_runs tables)
 workflows/     Exported n8n workflow JSON (credential *ids* only, no secrets)
-CLAUDE.md      Working agreement + full build log and deviations log
+CLAUDE.md      Original author's working agreement + build log and deviations log
 ```
 
 ### docs/
@@ -96,7 +104,8 @@ CLAUDE.md      Working agreement + full build log and deviations log
 |---|---|
 | [WORKFLOW-EXPLAINED.md](docs/WORKFLOW-EXPLAINED.md) | The system explained from scratch. Best single document here. |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Node-by-node map of the live workflow, and the data model |
-| [SETUP.md](docs/SETUP.md) | Zero to running locally |
+| [SETUP.md](docs/SETUP.md) | Zero to running locally, with your own Meta app |
+| [AGENT-BRIEF.md](docs/AGENT-BRIEF.md) | Dense orientation for AI agents working in this repo |
 | [LESSONS-LEARNED.md](docs/LESSONS-LEARNED.md) | Traps actually hit while building, with full explanations. Read when stuck. |
 | [SHOPIFY-SETUP.md](docs/SHOPIFY-SETUP.md) | P2 groundwork — the Shopify app for the next project |
 | [NOTEBOOKLM-PROMPT.md](docs/NOTEBOOKLM-PROMPT.md) | Prompt for generating an audio overview of this system |
@@ -121,7 +130,7 @@ The whole point of the project is learning to debug this class of system.
 Full detail in **[docs/SETUP.md](docs/SETUP.md)**. The short version:
 
 ```bash
-cp .env.example .env      # then fill it in — ask Ali for the shared values
+cp .env.example .env      # your own Meta values; Supabase + DeepSeek are shared
 npm run verify:meta       # each script proves ONE service works, in isolation
 npm run verify:supabase
 npm run verify:deepseek
@@ -135,8 +144,12 @@ npm run test:webhook      # POST a fake WhatsApp payload at your local n8n
 Requires **Node 22+** (the scripts are ESM and use `--env-file`).
 
 `npm run test:webhook` is the main development loop — it fakes an inbound
-WhatsApp message so you can exercise the whole workflow without a real phone
-and without owning the shared Meta webhook.
+WhatsApp message so you can exercise the whole workflow without a real phone,
+without Meta, and without ngrok.
+
+Each developer runs their **own** Meta app, test number, ngrok tunnel and n8n
+instance. Supabase and DeepSeek are shared. See
+[CONTRIBUTING.md](CONTRIBUTING.md#how-the-two-setups-are-split).
 
 ---
 
@@ -151,6 +164,9 @@ Known loose ends — none blocking:
 - **No `X-Hub-Signature-256` verification** on the inbound webhook.
   `META_APP_ID` / `META_APP_SECRET` are unset. Optional for P1, expected for P2.
   Anyone who learns the webhook URL can POST a fake message at it today.
+- **The GET handshake doesn't check the verify token.** The `If` node tests
+  only `hub.mode == "subscribe"`. `CLAUDE.md` step 4 claims both conditions;
+  the exported workflow has one. Low risk, but docs ≠ reality here.
 - **Stale `assistant_runs` rows** sitting at `status: claimed` with no
   completion — historical noise from before the `Complete run` node existed.
 - **Credentials exposed during development have not been rotated.**
