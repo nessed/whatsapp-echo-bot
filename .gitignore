@@ -36,3 +36,6 @@ Thumbs.db
 tmp/
 scratch/
 *.local.json
+
+# Local reference material, not part of the project
+Copy of planet-junior-infrastructure-v2.md.pdf
