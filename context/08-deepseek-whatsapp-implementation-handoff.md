@@ -80,7 +80,7 @@ Do not disturb the GET verification nodes or the status branch.
 - `scripts/04-verify-deepseek.js` — isolated DeepSeek test.
 - `workflows/echo-bot.json` — last exported inbound-only workflow snapshot. It is
   not yet the desired final workflow.
-- `LESSONS-LEARNED.md` — n8n traps discovered while building the inbound path.
+- `docs/LESSONS-LEARNED.md` — n8n traps discovered while building the inbound path.
 
 ## Phase 0 — Start the local services
 
@@ -505,7 +505,7 @@ Only after all tests pass:
    but must not contain `Bearer`, a DeepSeek key, Meta token, Supabase service-role
    key, or any raw secret.
 3. Update the completed-step checklist in `CLAUDE.md` and add unexpected behavior
-   to `LESSONS-LEARNED.md`.
+   to `docs/LESSONS-LEARNED.md`.
 4. Commit and push the export and documentation changes.
 
 ## Handoff behavior for another Claude

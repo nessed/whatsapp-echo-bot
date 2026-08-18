@@ -2,7 +2,7 @@
 
 ## What to upload
 
-Upload **`WORKFLOW-EXPLAINED.md`**. That one file is self-contained.
+Upload **`WORKFLOW-EXPLAINED.md`** (in this same `docs/` folder). That one file is self-contained.
 
 Optionally also upload `workflows/whatsapp-deepseek-assistant.json` — the
 actual workflow file — if you want NotebookLM to be able to point at concrete

@@ -1,0 +1,18 @@
+{
+  "name": "whatsapp-deepseek-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A private WhatsApp number that answers with DeepSeek and remembers the conversation. Meta Cloud API -> n8n -> Supabase + DeepSeek.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "verify:meta": "node --env-file=.env scripts/01-verify-meta-credentials.js",
+    "verify:supabase": "node --env-file=.env scripts/02-verify-supabase.js",
+    "verify:deepseek": "node --env-file=.env scripts/04-verify-deepseek.js",
+    "verify:all": "npm run verify:meta && npm run verify:supabase && npm run verify:deepseek",
+    "test:webhook": "node --env-file=.env scripts/03-post-fake-payload.js"
+  },
+  "license": "UNLICENSED"
+}
