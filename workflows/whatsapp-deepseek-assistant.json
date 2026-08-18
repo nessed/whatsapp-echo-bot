@@ -481,7 +481,8 @@
           "id": "rAQfTU99puavx9wW",
           "name": "DeepSeek account"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -506,6 +507,192 @@
         "httpHeaderAuth": {
           "id": "UEak7jaaZ4jRkSbB",
           "name": "Meta WhatsApp"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "options": {},
+        "method": "POST",
+        "url": "https://evauinppptyamkttwfdd.supabase.co/rest/v1/messages",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "wa_message_id"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=ignore-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  from_number: $('Edit Fields').item.json.from_number,\n  message_text: $('DeepSeek chat').item.json.choices[0].message.content,\n  direction: \"out\",\n  wa_message_id: $('Send WhatsApp reply').item.json.messages[0].id,\n  timestamp: new Date().toISOString(),\n  raw_payload: $('Send WhatsApp reply').item.json\n} }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3120,
+        48
+      ],
+      "id": "2eddee04-0b98-404e-a125-c1127dc7dbf1",
+      "name": "Log outbound",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Wc7l3LiDoR0Bx2fi",
+          "name": "Supabase (messages)"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "options": {},
+        "method": "PATCH",
+        "url": "https://evauinppptyamkttwfdd.supabase.co/rest/v1/assistant_runs",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "inbound_wa_message_id",
+              "value": "=eq.{{ $('Edit Fields').item.json.wa_message_id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  status: \"completed\",\n  outbound_wa_message_id: $('Send WhatsApp reply').item.json.messages[0].id,\n  prompt_tokens: $('DeepSeek chat').item.json.usage.prompt_tokens,\n  completion_tokens: $('DeepSeek chat').item.json.usage.completion_tokens,\n  total_tokens: $('DeepSeek chat').item.json.usage.total_tokens,\n  completed_at: new Date().toISOString()\n} }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3328,
+        48
+      ],
+      "id": "4afbdd40-9605-4c30-b8c8-945d5a7591f2",
+      "name": "Complete run",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Wc7l3LiDoR0Bx2fi",
+          "name": "Supabase (messages)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "options": {},
+        "method": "POST",
+        "url": "https://graph.facebook.com/v25.0/1303482916173126/messages",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  messaging_product: \"whatsapp\",\n  to: $('Edit Fields').item.json.from_number,\n  type: \"text\",\n  text: { body: \"I currently support text messages only.\" }\n} }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1792,
+        384
+      ],
+      "id": "0100e960-aab0-4ce8-8d64-d9093b9c8639",
+      "name": "Send text-only reply",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "UEak7jaaZ4jRkSbB",
+          "name": "Meta WhatsApp"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "options": {},
+        "method": "POST",
+        "url": "https://evauinppptyamkttwfdd.supabase.co/rest/v1/messages",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "wa_message_id"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=ignore-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  from_number: $('Edit Fields').item.json.from_number,\n  message_text: \"I currently support text messages only.\",\n  direction: \"out\",\n  wa_message_id: $('Send text-only reply').item.json.messages[0].id,\n  timestamp: new Date().toISOString(),\n  raw_payload: $('Send text-only reply').item.json\n} }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        384
+      ],
+      "id": "28288808-94d4-46ec-9f0a-82e0474fb61e",
+      "name": "Log text-only reply",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Wc7l3LiDoR0Bx2fi",
+          "name": "Supabase (messages)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "options": {},
+        "method": "PATCH",
+        "url": "https://evauinppptyamkttwfdd.supabase.co/rest/v1/assistant_runs",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "inbound_wa_message_id",
+              "value": "=eq.{{ $('Edit Fields').item.json.wa_message_id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  status: \"failed\",\n  error_code: String($json.error?.code ?? $json.error?.name ?? \"unknown\"),\n  error_message: String($json.error?.message ?? JSON.stringify($json)).slice(0, 500),\n  completed_at: new Date().toISOString()\n} }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3120,
+        272
+      ],
+      "id": "eb9f7fdf-5dd4-4df1-8e1f-c162d3f49f29",
+      "name": "Mark run failed",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Wc7l3LiDoR0Bx2fi",
+          "name": "Supabase (messages)"
         }
       }
     }
@@ -622,7 +809,13 @@
             "index": 0
           }
         ],
-        []
+        [
+          {
+            "node": "Send text-only reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Claim assistant run": {
@@ -675,6 +868,60 @@
         [
           {
             "node": "Send WhatsApp reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark run failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp reply": {
+      "main": [
+        [
+          {
+            "node": "Log outbound",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark run failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log outbound": {
+      "main": [
+        [
+          {
+            "node": "Complete run",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark run failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send text-only reply": {
+      "main": [
+        [
+          {
+            "node": "Log text-only reply",
             "type": "main",
             "index": 0
           }
