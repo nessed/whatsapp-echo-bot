@@ -60,7 +60,10 @@ capped at 512 in `Build DeepSeek request`; leave it there.
 
 ## Setting up your own half
 
-Full walkthrough in [docs/SETUP.md](docs/SETUP.md). The part people miss:
+Full walkthrough in [docs/SETUP.md](docs/SETUP.md). If you were handed a copy
+of the other developer's `.env`, work through
+[docs/ENV-HANDOVER.md](docs/ENV-HANDOVER.md) instead — it marks every variable
+KEEP or REPLACE. The part people miss:
 
 ### ⚠️ The workflow does not read `.env`
 

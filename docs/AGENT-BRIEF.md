@@ -74,6 +74,11 @@ Configuration lives in **two disconnected places**:
 So changing `.env` does **not** change the bot's behaviour. If asked to change
 the allowed sender or the WhatsApp number, the change is in the n8n node.
 
+If your operator inherited someone else's `.env`, [ENV-HANDOVER.md](ENV-HANDOVER.md)
+lists every variable as KEEP (Supabase + DeepSeek, shared) or REPLACE (all
+Meta, ngrok and n8n values), plus the node literals and credentials `.env`
+does not cover.
+
 ### The literals baked into nodes
 
 | Node | Literal | Meaning |

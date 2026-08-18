@@ -51,6 +51,10 @@ cd whatsapp-echo-bot
 cp .env.example .env
 ```
 
+> **Were you handed a copy of the other developer's `.env` instead?** Use
+> [ENV-HANDOVER.md](ENV-HANDOVER.md) — it lists every variable as KEEP or
+> REPLACE, plus the node literals and credentials `.env` doesn't cover.
+
 `.env.example` documents every variable. Fill in:
 
 - **From the other developer** (send privately, never through git):

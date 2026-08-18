@@ -106,6 +106,7 @@ CLAUDE.md      Original author's working agreement + build log and deviations lo
 | [WORKFLOW-EXPLAINED.md](docs/WORKFLOW-EXPLAINED.md) | The system explained from scratch. Best single document here. |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Node-by-node map of the live workflow, and the data model |
 | [SETUP.md](docs/SETUP.md) | Zero to running locally, with your own Meta app |
+| [ENV-HANDOVER.md](docs/ENV-HANDOVER.md) | **Given someone else's `.env`?** Exactly which values to replace vs keep |
 | [AGENT-BRIEF.md](docs/AGENT-BRIEF.md) | Dense orientation for AI agents working in this repo |
 | [LESSONS-LEARNED.md](docs/LESSONS-LEARNED.md) | Traps actually hit while building, with full explanations. Read when stuck. |
 | [SHOPIFY-SETUP.md](docs/SHOPIFY-SETUP.md) | P2 groundwork — the Shopify app for the next project |
