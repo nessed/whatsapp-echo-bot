@@ -224,9 +224,137 @@ rather than assuming a previous attempt died just because its log went quiet.
 
 ## Next step
 
-1. Create a test order in the dev store with a phone number attached.
-2. Decide whether P2 needs `read_products`; if yes, add the scope, release a new
-   app version and reinstall Kavern, then re-run `npm run verify:shopify`.
-3. Build the n8n token step: an HTTP Request node POSTing the client-credentials
-   grant, feeding `X-Shopify-Access-Token` into the Admin GraphQL call. Request a
-   fresh token per run rather than caching one — they expire in 24h.
+1. Create a test order in the dev store with a phone number attached — still
+   not done, `orders(first: 10)` returns 0. Needed before the COD-confirmation
+   side of P2 has anything to work against.
+2. `read_products` scope — done, see above. `npm run verify:shopify` returns
+   all three reads clean as of 19 August 2026.
+3. Build the product-answering bot branch below.
+
+## Product-answering bot — plan (19 August 2026)
+
+Decided in conversation, not yet built:
+
+- **Live Shopify data, not a prompt-only restriction.** DeepSeek gets fed the
+  real catalog (name, price, stock, description) so it answers with actual
+  facts instead of guessing or refusing everything.
+- **Bolted onto the existing live P1 workflow**, not a separate P2 workflow.
+  Same `whatsapp-deepseek-assistant` workflow, the DeepSeek branch just gets
+  smarter. This means it's a change to something already built and verified —
+  build carefully, verify each new node before moving to the next.
+- **Fetch the full catalog on every message**, no keyword gate deciding
+  whether to bother calling Shopify first. Simple, and at 10 products the
+  extra round trip is cheap.
+- **Off-topic questions get declined by DeepSeek itself**, via a system
+  prompt instruction — no separate hard keyword/intent gate node. Less to
+  build, though it depends on the model actually following the instruction
+  every time; worth spot-checking once it's live.
+- **Still open, not decided:** whether to put an Airtable/Google Sheets layer
+  between Shopify and DeepSeek (Shopify → sync job → sheet → DeepSeek reads
+  the sheet) instead of hitting the Shopify Admin API directly per message.
+  Would be more "presentable" and human-editable, but it's a second workflow
+  to build (a scheduled sync job) plus a new credential, not a swap of equal
+  size. Pick this up before building if the sheet route is still wanted —
+  it changes the shape of the nodes below.
+
+### Node type — settled
+
+`DeepSeek chat` stays an **HTTP Request** node, not a dedicated DeepSeek
+node. n8n's only DeepSeek-branded node (`DeepSeek Chat Model`) is a
+LangChain sub-node — it only exposes an `ai_languageModel` connector, not
+the `main` connector every other node in this chain uses, so it physically
+can't be wired into a plain sequential branch. This was already hit and
+logged during the original P1 build (see the deviations log in `CLAUDE.md`).
+The new Shopify-fetch nodes below are HTTP Request nodes too, for the same
+reason — full control over the request/response shape that `Complete run`
+and the failure path both depend on.
+
+### Build spec (direct-fetch version, if not doing the sheet layer)
+
+**1. Credential — `Shopify Client Credentials` (Custom Auth type).**
+n8n → Credentials → New → "Custom Auth". Single JSON field:
+
+```json
+{
+  "body": {
+    "client_id": "<SHOPIFY_CLIENT_ID from .env>",
+    "client_secret": "<SHOPIFY_CLIENT_SECRET from .env>",
+    "grant_type": "client_credentials"
+  }
+}
+```
+
+Keeps both secrets in n8n's encrypted store, out of the exported workflow
+JSON — same principle as the Meta/Supabase credentials already in place.
+Confirmed from source (`HttpCustomAuth.credentials.js`) that this credential
+type merges its JSON into the request's `headers`/`body`/`qs`; n8n's built-in
+Shopify OAuth2 credential was checked and ruled out — it's hardcoded to the
+authorization-code grant, not client-credentials.
+
+**2. New node — `Get Shopify token`** (HTTP Request), inserted after
+`Load history`, before `Build DeepSeek request`, on the `Claim succeeded`
+true branch.
+
+- Method: `POST`
+- URL: `https://kavern-ngm2illt.myshopify.com/admin/oauth/access_token`
+- Authentication: Generic Credential Type → Custom Auth →
+  `Shopify Client Credentials`
+- Body: leave empty — the credential supplies everything
+- `onError`: Continue (using error output) → wire to `Mark run failed`
+
+Verify this one specifically before moving on — check the execution shows a
+200 with an `access_token`. Not fully confirmed whether n8n merges the
+credential JSON cleanly into an otherwise-empty node body; if it 400s/401s,
+fall back to putting `grant_type: client_credentials` directly in the node's
+own body and leaving only `client_id`/`client_secret` in the credential.
+
+**3. New node — `Get Shopify products`** (HTTP Request), right after.
+
+- Method: `POST`
+- URL: `=https://kavern-ngm2illt.myshopify.com/admin/api/2026-07/graphql.json`
+- Header: `X-Shopify-Access-Token` = Expression `={{ $json.access_token }}`
+- Body (JSON, Expression):
+
+```javascript
+={{ {
+  query: "{ products(first: 20) { nodes { title handle status totalInventory description priceRangeV2 { minVariantPrice { amount currencyCode } } } } }"
+} }}
+```
+
+- `onError`: Continue (using error output) → `Mark run failed`
+
+**4. Edit `Build DeepSeek request`** (Code node). Replace the current
+hardcoded system message —
+
+```javascript
+{ role: 'system', content: 'You are a helpful assistant.' }
+```
+
+— with one built from the fetched catalog:
+
+```javascript
+const products = $('Get Shopify products').item.json.data.products.nodes;
+
+const catalogText = products.map(p => {
+  const price = p.priceRangeV2?.minVariantPrice;
+  return `- ${p.title} (handle: ${p.handle}) | ${p.status} | stock: ${p.totalInventory} | price: ${price ? `${price.amount} ${price.currencyCode}` : 'n/a'} | ${p.description || 'no description'}`;
+}).join('\n');
+
+const systemPrompt = `You are Kavern's product assistant on WhatsApp. Only answer using the product catalog below — names, prices, stock, and descriptions. Do not invent products, prices, or stock levels that aren't listed. If asked about anything not covered by this catalog, politely say you can only help with questions about Kavern's products.
+
+Product catalog:
+${catalogText}`;
+```
+
+Use `{ role: 'system', content: systemPrompt }` as the first message. History
+reversal and the `direction` → role mapping stay exactly as they are.
+
+### Done when
+
+- A real question about a real product name/price/stock gets an answer
+  matching what `npm run verify:shopify` shows.
+- An unrelated question (weather, general chat) gets a polite decline instead
+  of a real answer.
+- A deliberately broken Shopify token routes the run to `failed`, same trick
+  already used to prove `Mark run failed` for the DeepSeek call.
+- Republish after wiring — same rule as every other edit to this workflow.
