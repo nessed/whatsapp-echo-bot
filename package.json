@@ -11,6 +11,7 @@
     "verify:meta": "node --env-file=.env scripts/01-verify-meta-credentials.js",
     "verify:supabase": "node --env-file=.env scripts/02-verify-supabase.js",
     "verify:deepseek": "node --env-file=.env scripts/04-verify-deepseek.js",
+    "verify:shopify": "node --env-file=.env scripts/05-verify-shopify.js",
     "verify:all": "npm run verify:meta && npm run verify:supabase && npm run verify:deepseek",
     "test:webhook": "node --env-file=.env scripts/03-post-fake-payload.js"
   },

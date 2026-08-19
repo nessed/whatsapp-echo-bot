@@ -94,22 +94,52 @@ Admin GraphQL requests. Shopify tokens from this flow last 24 hours, so the
 workflow should request a fresh token when needed rather than storing one in
 `.env`.
 
-## Product-data test
+## Admin API pull — verified 19 August 2026
 
-We attempted a read-only GraphQL request for the first 10 products with:
+`scripts/05-verify-shopify.js` (`npm run verify:shopify`) does the whole flow in
+one shot: client-credentials token, then three read-only GraphQL queries. It
+never prints the token and never writes to the store.
 
-```graphql
-{ products(first: 10) { nodes { title handle status totalInventory } } }
+Result:
+
+| Step | Outcome |
+|---|---|
+| Token (`client_credentials`) | HTTP 200, `expires_in` 86399s (24h) |
+| `shop` query | HTTP 200 — Kavern, USD, America/New_York, plan "Shopify Plus App Development" |
+| `products(first: 10)` | `ACCESS_DENIED` — "Access denied for products field." |
+| `orders(first: 10)` | HTTP 200, **0 orders** (dev store is empty) |
+
+The earlier hang/timeout was the local tunnel being down, not Shopify — the
+Admin API is reached directly at `kavern-ngm2illt.myshopify.com` and does not
+involve the ngrok URL at all.
+
+### Scopes actually granted
+
+The token response reports:
+
+```text
+scope=read_customers,write_orders
 ```
 
-Results:
+Two things differ from what was configured in the Dev Dashboard:
 
-1. First request failed with `app_not_installed`, which correctly identified
-   that Kavern had not been installed on the shop.
-2. Kavern was then installed on `kavern-ngm2illt.myshopify.com`.
-3. Two subsequent read-only requests did not return product data: one hung and
-   timed out, and the next failed before an HTTP response was received. No data
-   was changed, and no credentials or access token were printed.
+- `read_orders` does not appear because `write_orders` already implies it. Order
+  reads work — the query returned 200 with an empty list.
+- **`read_products` was never requested**, which is why the products query is
+  denied. Add it in Dev Dashboard → Kavern → configuration scopes, release a new
+  app version, then reinstall/update Kavern on the store so the new scope is
+  granted. A token minted before that still carries the old scope.
+
+Products are not needed for the COD confirmation flow itself, only for showing
+line-item detail in the WhatsApp message. Decide whether P2 needs it before
+paying the reinstall step.
+
+### Store has no orders yet
+
+`orders` returns an empty list, so there is nothing to build the COD confirmation
+message against. Create at least one test order in the dev store (Shopify admin →
+Orders → Create order, with a phone number on the customer/shipping address) before
+wiring the n8n side.
 
 ## Local-service recovery
 
@@ -146,9 +176,57 @@ Keep the local n8n and ngrok processes running. If the laptop sleeps, restarts,
 or their terminal session ends, start them again before relying on the WhatsApp
 webhook or Shopify App URL.
 
+### Second occurrence — 19 August 2026, duplicate n8n processes
+
+Same symptom (`ERR_NGROK_3200` on the Shopify app page), different cause the
+second time. Diagnosis:
+
+- ngrok was actually still up and correctly forwarding to port `5678` — its
+  local API (`127.0.0.1:4040/api/tunnels`) returned 200 the whole time.
+- n8n was down. A first restart attempt (started detached via `nohup ... &
+  disown`) looked like it had launched, but the process was gone minutes later
+  with an empty log — that backgrounding method doesn't reliably survive in
+  this environment.
+- A second restart attempt was made without confirming the first one was
+  actually dead. Result: **two separate `n8n start` processes**, both trying
+  to bind port `5678`. Neither answered `healthz` cleanly, and the tunnel had
+  no working backend, reproducing `ERR_NGROK_3200` even though "something"
+  was technically running.
+
+Fix:
+
+1. Listed actual OS processes (`Get-CimInstance Win32_Process -Filter
+   "Name = 'node.exe'"`, which unlike `ps aux` in this environment reliably
+   shows the full command line) to confirm two `n8n start` processes existed.
+2. Killed both.
+3. Started **one** clean n8n instance the reliable way for this environment:
+   `n8n` resolves to a `.ps1` shim (`Get-Command n8n`), so a plain
+   `Start-Process -FilePath n8n` fails with "not a valid Win32 application."
+   Launching it via a hidden wrapper —
+   `Start-Process powershell.exe -ArgumentList '-NoProfile -Command "n8n start"'`
+   with output redirected to a log file — starts it detached and durably.
+4. Waited out the normal boot sequence: `healthz` returns 200 fairly quickly,
+   but the root path (`/`) keeps returning `503 {"message":"Database is not
+   ready!"}` for a bit longer while SQLite finishes initializing. Root
+   returning 200 is the real "fully up" signal, not just `healthz`.
+5. Confirmed end-to-end: `healthz` → 200, public ngrok URL → 200.
+
+Also worth knowing: a `Get-CimInstance Win32_Process` query that reads full
+command lines will print any secret passed as a CLI argument in plaintext —
+this happened here with the `NGROK_AUTHTOKEN` (it's started with
+`ngrok http 5678 --authtoken <token>`, visible in `CommandLine`). Not a repo
+leak, but worth rotating that token in the ngrok dashboard since it briefly
+appeared in a terminal session.
+
+**Rule for next time:** before starting n8n again, check for existing node
+processes first (`Get-CimInstance Win32_Process -Filter "Name = 'node.exe'"`)
+rather than assuming a previous attempt died just because its log went quiet.
+
 ## Next step
 
-Retry the product query now that the app is installed and the public App URL is
-back online. If it still times out, verify in Dev Dashboard that Kavern is
-installed on this exact store under the same organization, then make a minimal
-token-only request before retrying GraphQL.
+1. Create a test order in the dev store with a phone number attached.
+2. Decide whether P2 needs `read_products`; if yes, add the scope, release a new
+   app version and reinstall Kavern, then re-run `npm run verify:shopify`.
+3. Build the n8n token step: an HTTP Request node POSTing the client-credentials
+   grant, feeding `X-Shopify-Access-Token` into the Admin GraphQL call. Request a
+   fresh token per run rather than caching one — they expire in 24h.
